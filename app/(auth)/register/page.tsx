@@ -7,9 +7,8 @@ import { useActionState, useEffect, useState } from 'react';
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 
-import { register, type RegisterActionState } from '../actions';
 import { toast } from '@/components/toast';
-import { useSession } from 'next-auth/react';
+import { register, type RegisterActionState } from '../actions';
 
 export default function Page() {
   const router = useRouter();
@@ -24,8 +23,6 @@ export default function Page() {
     },
   );
 
-  const { update: updateSession } = useSession();
-
   useEffect(() => {
     if (state.status === 'user_exists') {
       toast({ type: 'error', description: 'Account already exists!' });
@@ -37,13 +34,13 @@ export default function Page() {
         description: 'Failed validating your submission!',
       });
     } else if (state.status === 'success') {
-      toast({ type: 'success', description: 'Account created successfully!' });
+      toast({ type: 'success', description: 'Account created successfully! Please check your email to verify your account.' });
 
       setIsSuccessful(true);
-      updateSession();
       router.refresh();
+      router.push('/');
     }
-  }, [state]);
+  }, [state, router]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
