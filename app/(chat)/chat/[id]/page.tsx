@@ -5,8 +5,8 @@ import { Chat } from '@/components/chat';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
+import { createClient } from '@/lib/supabase/server';
 import { convertToUIMessages } from '@/lib/utils';
-import { createClient } from '@/utils/supabase/server';
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

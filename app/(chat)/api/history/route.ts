@@ -1,6 +1,6 @@
 import { getChatsByUserId } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {

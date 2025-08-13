@@ -18,10 +18,10 @@ import {
   saveMessages,
 } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
+import { createClient } from '@/lib/supabase/server';
+import type { UserType } from '@/lib/supabase/types';
 import type { ChatMessage } from '@/lib/types';
 import { convertToUIMessages, generateUUID, getUserType } from '@/lib/utils';
-import { createClient } from '@/utils/supabase/server';
-import type { UserType } from '@/utils/supabase/types';
 import { geolocation } from '@vercel/functions';
 import {
   convertToModelMessages,

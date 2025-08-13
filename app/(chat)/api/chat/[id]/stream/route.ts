@@ -5,8 +5,8 @@ import {
 } from '@/lib/db/queries';
 import type { Chat } from '@/lib/db/schema';
 import { ChatSDKError } from '@/lib/errors';
+import { createClient } from '@/lib/supabase/server';
 import type { ChatMessage } from '@/lib/types';
-import { createClient } from '@/utils/supabase/server';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
 import { differenceInSeconds } from 'date-fns';
 import { getStreamContext } from '../../route';
