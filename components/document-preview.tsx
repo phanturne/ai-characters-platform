@@ -1,5 +1,9 @@
 'use client';
 
+import { useArtifact } from '@/hooks/use-artifact';
+import type { Document } from '@/lib/db/schema';
+import { cn, fetcher } from '@/lib/utils';
+import equal from 'fast-deep-equal';
 import {
   memo,
   type MouseEvent,
@@ -8,19 +12,15 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import type { ArtifactKind, UIArtifact } from './artifact';
-import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from './icons';
-import { cn, fetcher } from '@/lib/utils';
-import type { Document } from '@/lib/db/schema';
-import { InlineDocumentSkeleton } from './document-skeleton';
 import useSWR from 'swr';
-import { Editor } from './text-editor';
-import { DocumentToolCall, DocumentToolResult } from './document';
+import type { ArtifactKind, UIArtifact } from './artifact';
 import { CodeEditor } from './code-editor';
-import { useArtifact } from '@/hooks/use-artifact';
-import equal from 'fast-deep-equal';
-import { SpreadsheetEditor } from './sheet-editor';
+import { DocumentToolCall, DocumentToolResult } from './document';
+import { InlineDocumentSkeleton } from './document-skeleton';
+import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from './icons';
 import { ImageEditor } from './image-editor';
+import { SpreadsheetEditor } from './sheet-editor';
+import { Editor } from './text-editor';
 
 interface DocumentPreviewProps {
   isReadonly: boolean;
@@ -154,7 +154,8 @@ const PureHitboxLayer = ({
 }) => {
   const handleClick = useCallback(
     (event: MouseEvent<HTMLElement>) => {
-      const boundingBox = event.currentTarget.getBoundingClientRect();
+      const boundingBox = hitboxRef.current?.getBoundingClientRect();
+      if (!boundingBox) return; // Safely handle null case
 
       setArtifact((artifact) =>
         artifact.status === 'streaming'
