@@ -1,9 +1,9 @@
-import { tool, type UIMessageStreamWriter } from 'ai';
-import type { Session } from 'next-auth';
-import { z } from 'zod';
-import { getDocumentById } from '@/lib/db/queries';
 import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
+import { getDocumentById } from '@/lib/db/queries';
 import type { ChatMessage } from '@/lib/types';
+import type { Session } from '@supabase/supabase-js';
+import { tool, type UIMessageStreamWriter } from 'ai';
+import { z } from 'zod';
 
 interface UpdateDocumentProps {
   session: Session;

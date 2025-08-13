@@ -1,13 +1,13 @@
-import {
-  convertToModelMessages,
-  createUIMessageStream,
-  JsonToSseTransformStream,
-  smoothStream,
-  stepCountIs,
-  streamText,
-} from 'ai';
-import { auth, type UserType } from '@/app/(auth)/auth';
-import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
+import type { VisibilityType } from '@/components/visibility-selector';
+import { entitlementsByUserType } from '@/lib/ai/entitlements';
+import type { ChatModel } from '@/lib/ai/models';
+import { systemPrompt, type RequestHints } from '@/lib/ai/prompts';
+import { myProvider } from '@/lib/ai/providers';
+import { createDocument } from '@/lib/ai/tools/create-document';
+import { getWeather } from '@/lib/ai/tools/get-weather';
+import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
+import { updateDocument } from '@/lib/ai/tools/update-document';
+import { isProductionEnvironment } from '@/lib/constants';
 import {
   createStreamId,
   deleteChatById,
@@ -17,26 +17,27 @@ import {
   saveChat,
   saveMessages,
 } from '@/lib/db/queries';
-import { convertToUIMessages, generateUUID } from '@/lib/utils';
-import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
-import { isProductionEnvironment } from '@/lib/constants';
-import { myProvider } from '@/lib/ai/providers';
-import { entitlementsByUserType } from '@/lib/ai/entitlements';
-import { postRequestBodySchema, type PostRequestBody } from './schema';
+import { ChatSDKError } from '@/lib/errors';
+import type { ChatMessage } from '@/lib/types';
+import { convertToUIMessages, generateUUID, getUserType } from '@/lib/utils';
+import { createClient } from '@/utils/supabase/server';
+import type { UserType } from '@/utils/supabase/types';
 import { geolocation } from '@vercel/functions';
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  JsonToSseTransformStream,
+  smoothStream,
+  stepCountIs,
+  streamText,
+} from 'ai';
+import { after } from 'next/server';
 import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from 'resumable-stream';
-import { after } from 'next/server';
-import { ChatSDKError } from '@/lib/errors';
-import type { ChatMessage } from '@/lib/types';
-import type { ChatModel } from '@/lib/ai/models';
-import type { VisibilityType } from '@/components/visibility-selector';
+import { generateTitleFromUserMessage } from '../../actions';
+import { postRequestBodySchema, type PostRequestBody } from './schema';
 
 export const maxDuration = 60;
 
@@ -85,13 +86,17 @@ export async function POST(request: Request) {
       selectedVisibilityType: VisibilityType;
     } = requestBody;
 
-    const session = await auth();
+    const supabase = await createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session?.user) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    const userType: UserType = session.user.type;
+    // Determine user type based on JWT claim instead of email pattern
+    const userType: UserType = getUserType(session.user);
 
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
@@ -233,7 +238,10 @@ export async function DELETE(request: Request) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session?.user) {
     return new ChatSDKError('unauthorized:chat').toResponse();

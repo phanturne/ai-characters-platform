@@ -13,24 +13,24 @@ import {
 import { chatModels } from '@/lib/ai/models';
 import { cn } from '@/lib/utils';
 
-import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
-import type { Session } from 'next-auth';
+import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
 
 export function ModelSelector({
-  session,
   selectedModelId,
   className,
 }: {
-  session: Session;
   selectedModelId: string;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
 
-  const userType = session.user.type;
-  const { availableChatModelIds } = entitlementsByUserType[userType];
+  const { userType } = useSupabaseAuth();
+  const userTypeForEntitlements = userType || 'guest';
+  const { availableChatModelIds } =
+    entitlementsByUserType[userTypeForEntitlements];
 
   const availableChatModels = chatModels.filter((chatModel) =>
     availableChatModelIds.includes(chatModel.id),

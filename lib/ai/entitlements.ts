@@ -1,4 +1,4 @@
-import type { UserType } from '@/app/(auth)/auth';
+import type { UserType } from '@/utils/supabase/types';
 import type { ChatModel } from './models';
 
 interface Entitlements {

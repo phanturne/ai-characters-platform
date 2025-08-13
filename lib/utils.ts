@@ -1,3 +1,5 @@
+import type { DBMessage, Document } from '@/lib/db/schema';
+import type { User } from '@supabase/supabase-js';
 import type {
   CoreAssistantMessage,
   CoreToolMessage,
@@ -5,11 +7,10 @@ import type {
   UIMessagePart,
 } from 'ai';
 import { type ClassValue, clsx } from 'clsx';
+import { formatISO } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
-import type { DBMessage, Document } from '@/lib/db/schema';
 import { ChatSDKError, type ErrorCode } from './errors';
 import type { ChatMessage, ChatTools, CustomUIDataTypes } from './types';
-import { formatISO } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -113,4 +114,22 @@ export function getTextFromMessage(message: ChatMessage): string {
     .filter((part) => part.type === 'text')
     .map((part) => part.text)
     .join('');
+}
+
+/**
+ * Determines if a user is anonymous based on JWT claims
+ * @param user - The Supabase user object
+ * @returns true if the user is anonymous, false otherwise
+ */
+export function isAnonymousUser(user: User): boolean {
+  return user?.app_metadata?.is_anonymous === true;
+}
+
+/**
+ * Determines the user type based on JWT claims
+ * @param user - The Supabase user object
+ * @returns 'guest' for anonymous users, 'regular' for authenticated users
+ */
+export function getUserType(user: User): 'guest' | 'regular' {
+  return isAnonymousUser(user) ? 'guest' : 'regular';
 }

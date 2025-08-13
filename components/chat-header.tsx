@@ -7,28 +7,27 @@ import { useWindowSize } from 'usehooks-ts';
 import { ModelSelector } from '@/components/model-selector';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { memo } from 'react';
 import { PlusIcon, VercelIcon } from './icons';
 import { useSidebar } from './ui/sidebar';
-import { memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { type VisibilityType, VisibilitySelector } from './visibility-selector';
-import type { Session } from 'next-auth';
 
 function PureChatHeader({
   chatId,
   selectedModelId,
   selectedVisibilityType,
   isReadonly,
-  session,
 }: {
   chatId: string;
   selectedModelId: string;
   selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
-  session: Session;
 }) {
   const router = useRouter();
   const { open } = useSidebar();
+  const { session } = useSupabaseAuth();
 
   const { width: windowWidth } = useWindowSize();
 
@@ -55,9 +54,8 @@ function PureChatHeader({
         </Tooltip>
       )}
 
-      {!isReadonly && (
+      {!isReadonly && session && (
         <ModelSelector
-          session={session}
           selectedModelId={selectedModelId}
           className="order-1 md:order-2"
         />

@@ -1,4 +1,3 @@
-import { auth } from '@/app/(auth)/auth';
 import {
   getChatById,
   getMessagesByChatId,
@@ -7,9 +6,10 @@ import {
 import type { Chat } from '@/lib/db/schema';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
+import { createClient } from '@/utils/supabase/server';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
-import { getStreamContext } from '../../route';
 import { differenceInSeconds } from 'date-fns';
+import { getStreamContext } from '../../route';
 
 export async function GET(
   _: Request,
@@ -28,7 +28,10 @@ export async function GET(
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session?.user) {
     return new ChatSDKError('unauthorized:chat').toResponse();
