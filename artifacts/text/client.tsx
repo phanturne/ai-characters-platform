@@ -1,7 +1,6 @@
 import { Artifact } from '@/components/create-artifact';
 import { DiffView } from '@/components/diffview';
 import { DocumentSkeleton } from '@/components/document-skeleton';
-import { Editor } from '@/components/text-editor';
 import {
   ClockRewind,
   CopyIcon,
@@ -10,7 +9,8 @@ import {
   RedoIcon,
   UndoIcon,
 } from '@/components/icons';
-import type { Suggestion } from '@/lib/db/schema';
+import { Editor } from '@/components/text-editor';
+import type { Suggestion } from '@/lib/supabase/schema';
 import { toast } from 'sonner';
 import { getSuggestions } from '../actions';
 

@@ -2,18 +2,24 @@ import {
   artifactKinds,
   documentHandlersByArtifactKind,
 } from '@/lib/artifacts/server';
+import type { Database } from '@/lib/supabase/database';
 import type { ChatMessage } from '@/lib/types';
 import { generateUUID } from '@/lib/utils';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { tool, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
 
 interface CreateDocumentProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  supabase: SupabaseClient<Database>;
 }
 
-export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
+export const createDocument = ({
+  session,
+  dataStream,
+  supabase,
+}: CreateDocumentProps) =>
   tool({
     description:
       'Create a document for a writing or content creation activities. This tool will call other functions that will generate the contents of the document based on the title and kind.',
@@ -62,6 +68,7 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
         title,
         dataStream,
         session,
+        supabase,
       });
 
       dataStream.write({ type: 'data-finish', data: null, transient: true });

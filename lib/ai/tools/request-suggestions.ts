@@ -1,5 +1,9 @@
-import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
-import type { Suggestion } from '@/lib/db/schema';
+import type {
+  Database,
+  Suggestion,
+  SupabaseClient,
+} from '@/lib/supabase/schema';
+import { getDocumentById, saveSuggestions } from '@/lib/supabase/services';
 import type { ChatMessage } from '@/lib/types';
 import { generateUUID } from '@/lib/utils';
 import type { Session } from '@supabase/supabase-js';
@@ -10,11 +14,13 @@ import { myProvider } from '../providers';
 interface RequestSuggestionsProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  supabase: SupabaseClient<Database>;
 }
 
 export const requestSuggestions = ({
   session,
   dataStream,
+  supabase,
 }: RequestSuggestionsProps) =>
   tool({
     description: 'Request suggestions for a document',
@@ -24,7 +30,7 @@ export const requestSuggestions = ({
         .describe('The ID of the document to request edits'),
     }),
     execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+      const document = await getDocumentById(supabase, { id: documentId });
 
       if (!document || !document.content) {
         return {
@@ -52,12 +58,12 @@ export const requestSuggestions = ({
       for await (const element of elementStream) {
         // @ts-ignore todo: fix type
         const suggestion: Suggestion = {
-          originalText: element.originalSentence,
-          suggestedText: element.suggestedSentence,
+          original_text: element.originalSentence,
+          suggested_text: element.suggestedSentence,
           description: element.description,
           id: generateUUID(),
-          documentId: documentId,
-          isResolved: false,
+          document_id: documentId,
+          is_resolved: false,
         };
 
         dataStream.write({
@@ -72,12 +78,12 @@ export const requestSuggestions = ({
       if (session.user?.id) {
         const userId = session.user.id;
 
-        await saveSuggestions({
+        await saveSuggestions(supabase, {
           suggestions: suggestions.map((suggestion) => ({
             ...suggestion,
             userId,
             createdAt: new Date(),
-            documentCreatedAt: document.createdAt,
+            documentCreatedAt: document.created_at,
           })),
         });
       }

@@ -8,6 +8,10 @@ import { getWeather } from '@/lib/ai/tools/get-weather';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { isProductionEnvironment } from '@/lib/constants';
+import { ChatSDKError } from '@/lib/errors';
+import type { Json } from '@/lib/supabase/database';
+import type { Chat } from '@/lib/supabase/schema';
+import { createClient } from '@/lib/supabase/server';
 import {
   createStreamId,
   deleteChatById,
@@ -16,9 +20,7 @@ import {
   getMessagesByChatId,
   saveChat,
   saveMessages,
-} from '@/lib/db/queries';
-import { ChatSDKError } from '@/lib/errors';
-import { createClient } from '@/lib/supabase/server';
+} from '@/lib/supabase/services';
 import type { UserType } from '@/lib/supabase/types';
 import type { ChatMessage } from '@/lib/types';
 import { convertToUIMessages, generateUUID, getUserType } from '@/lib/utils';
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
     // Determine user type based on JWT claim instead of email pattern
     const userType: UserType = getUserType(session.user);
 
-    const messageCount = await getMessageCountByUserId({
+    const messageCount = await getMessageCountByUserId(supabase, {
       id: session.user.id,
       differenceInHours: 24,
     });
@@ -107,26 +109,39 @@ export async function POST(request: Request) {
       return new ChatSDKError('rate_limit:chat').toResponse();
     }
 
-    const chat = await getChatById({ id });
+    let chat: Chat | null = null;
+    try {
+      chat = await getChatById(supabase, { id });
+    } catch (error) {
+      chat = null;
+    }
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
         message,
       });
 
-      await saveChat({
-        id,
-        userId: session.user.id,
-        title,
-        visibility: selectedVisibilityType,
-      });
+      try {
+        await saveChat(supabase, {
+          id,
+          userId: session.user.id,
+          title,
+          visibility: selectedVisibilityType,
+        });
+      } catch (error) {
+        console.error('Failed to save chat:', error);
+        return new ChatSDKError(
+          'bad_request:database',
+          'Failed to create new chat',
+        ).toResponse();
+      }
     } else {
-      if (chat.userId !== session.user.id) {
+      if (chat.user_id !== session.user.id) {
         return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
 
-    const messagesFromDb = await getMessagesByChatId({ id });
+    const messagesFromDb = await getMessagesByChatId(supabase, { id });
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
 
     const { longitude, latitude, city, country } = geolocation(request);
@@ -138,21 +153,21 @@ export async function POST(request: Request) {
       country,
     };
 
-    await saveMessages({
+    await saveMessages(supabase, {
       messages: [
         {
-          chatId: id,
+          chat_id: id,
           id: message.id,
           role: 'user',
-          parts: message.parts,
+          parts: message.parts as Json,
           attachments: [],
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         },
       ],
     });
 
     const streamId = generateUUID();
-    await createStreamId({ streamId, chatId: id });
+    await createStreamId(supabase, { streamId, chatId: id });
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
@@ -173,11 +188,12 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: 'word' }),
           tools: {
             getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
+            createDocument: createDocument({ session, dataStream, supabase }),
+            updateDocument: updateDocument({ session, dataStream, supabase }),
             requestSuggestions: requestSuggestions({
               session,
               dataStream,
+              supabase,
             }),
           },
           experimental_telemetry: {
@@ -196,14 +212,14 @@ export async function POST(request: Request) {
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
-        await saveMessages({
+        await saveMessages(supabase, {
           messages: messages.map((message) => ({
             id: message.id,
             role: message.role,
-            parts: message.parts,
-            createdAt: new Date(),
+            parts: message.parts as Json,
+            created_at: new Date().toISOString(),
             attachments: [],
-            chatId: id,
+            chat_id: id,
           })),
         });
       },
@@ -227,6 +243,15 @@ export async function POST(request: Request) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+
+    // Log the error for debugging
+    console.error('Unexpected error in chat POST:', error);
+
+    // Return a generic error response
+    return new ChatSDKError(
+      'bad_request:database',
+      'An unexpected error occurred',
+    ).toResponse();
   }
 }
 
@@ -247,13 +272,13 @@ export async function DELETE(request: Request) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
-  const chat = await getChatById({ id });
+  const chat = await getChatById(supabase, { id });
 
-  if (chat.userId !== session.user.id) {
+  if (chat.user_id !== session.user.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 
-  const deletedChat = await deleteChatById({ id });
+  const deletedChat = await deleteChatById(supabase, { id });
 
   return Response.json(deletedChat, { status: 200 });
 }

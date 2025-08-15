@@ -1,8 +1,12 @@
 import { useSWRConfig } from 'swr';
 import { useCopyToClipboard } from 'usehooks-ts';
 
-import type { Vote } from '@/lib/db/schema';
+import type { Vote } from '@/lib/supabase/schema';
 
+import type { ChatMessage } from '@/lib/types';
+import equal from 'fast-deep-equal';
+import { memo } from 'react';
+import { toast } from 'sonner';
 import { CopyIcon, ThumbDownIcon, ThumbUpIcon } from './icons';
 import { Button } from './ui/button';
 import {
@@ -11,10 +15,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import { memo } from 'react';
-import equal from 'fast-deep-equal';
-import { toast } from 'sonner';
-import type { ChatMessage } from '@/lib/types';
 
 export function PureMessageActions({
   chatId,
@@ -68,7 +68,7 @@ export function PureMessageActions({
             <Button
               data-testid="message-upvote"
               className="py-1 px-2 h-fit text-muted-foreground !pointer-events-auto"
-              disabled={vote?.isUpvoted}
+              disabled={vote?.is_upvoted}
               variant="outline"
               onClick={async () => {
                 const upvote = fetch('/api/vote', {
@@ -89,15 +89,17 @@ export function PureMessageActions({
                         if (!currentVotes) return [];
 
                         const votesWithoutCurrent = currentVotes.filter(
-                          (vote) => vote.messageId !== message.id,
+                          (vote) => vote.message_id !== message.id,
                         );
 
                         return [
                           ...votesWithoutCurrent,
                           {
-                            chatId,
-                            messageId: message.id,
-                            isUpvoted: true,
+                            chat_id: chatId,
+                            message_id: message.id,
+                            is_upvoted: true,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
                           },
                         ];
                       },
@@ -122,7 +124,7 @@ export function PureMessageActions({
               data-testid="message-downvote"
               className="py-1 px-2 h-fit text-muted-foreground !pointer-events-auto"
               variant="outline"
-              disabled={vote && !vote.isUpvoted}
+              disabled={vote && !vote.is_upvoted}
               onClick={async () => {
                 const downvote = fetch('/api/vote', {
                   method: 'PATCH',
@@ -142,15 +144,17 @@ export function PureMessageActions({
                         if (!currentVotes) return [];
 
                         const votesWithoutCurrent = currentVotes.filter(
-                          (vote) => vote.messageId !== message.id,
+                          (vote) => vote.message_id !== message.id,
                         );
 
                         return [
                           ...votesWithoutCurrent,
                           {
-                            chatId,
-                            messageId: message.id,
-                            isUpvoted: false,
+                            chat_id: chatId,
+                            message_id: message.id,
+                            is_upvoted: false,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
                           },
                         ];
                       },

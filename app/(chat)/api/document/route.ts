@@ -1,11 +1,11 @@
 import type { ArtifactKind } from '@/components/artifact';
+import { ChatSDKError } from '@/lib/errors';
+import { createClient } from '@/lib/supabase/server';
 import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
   saveDocument,
-} from '@/lib/db/queries';
-import { ChatSDKError } from '@/lib/errors';
-import { createClient } from '@/lib/supabase/server';
+} from '@/lib/supabase/services';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById(supabase, { id });
 
   const [document] = documents;
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:document').toResponse();
   }
 
-  if (document.userId !== session.user.id) {
+  if (document.user_id !== session.user.id) {
     return new ChatSDKError('forbidden:document').toResponse();
   }
 
@@ -69,17 +69,17 @@ export async function POST(request: Request) {
   }: { content: string; title: string; kind: ArtifactKind } =
     await request.json();
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById(supabase, { id });
 
   if (documents.length > 0) {
     const [document] = documents;
 
-    if (document.userId !== session.user.id) {
+    if (document.user_id !== session.user.id) {
       return new ChatSDKError('forbidden:document').toResponse();
     }
   }
 
-  const document = await saveDocument({
+  const document = await saveDocument(supabase, {
     id,
     content,
     title,
@@ -118,15 +118,15 @@ export async function DELETE(request: Request) {
     return new ChatSDKError('unauthorized:document').toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById(supabase, { id });
 
   const [document] = documents;
 
-  if (document.userId !== session.user.id) {
+  if (document.user_id !== session.user.id) {
     return new ChatSDKError('forbidden:document').toResponse();
   }
 
-  const documentsDeleted = await deleteDocumentsByIdAfterTimestamp({
+  const documentsDeleted = await deleteDocumentsByIdAfterTimestamp(supabase, {
     id,
     timestamp: new Date(timestamp),
   });

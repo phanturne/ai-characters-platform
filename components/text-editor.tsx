@@ -4,9 +4,8 @@ import { exampleSetup } from 'prosemirror-example-setup';
 import { inputRules } from 'prosemirror-inputrules';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import React, { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
-import type { Suggestion } from '@/lib/db/schema';
 import {
   documentSchema,
   handleTransaction,
@@ -22,6 +21,7 @@ import {
   suggestionsPlugin,
   suggestionsPluginKey,
 } from '@/lib/editor/suggestions';
+import type { Suggestion } from '@/lib/supabase/schema';
 
 type EditorProps = {
   content: string;

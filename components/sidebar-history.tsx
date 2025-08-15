@@ -16,7 +16,7 @@ import {
   SidebarMenu,
   useSidebar,
 } from '@/components/ui/sidebar';
-import type { Chat } from '@/lib/db/schema';
+import type { Chat } from '@/lib/supabase/schema';
 import { fetcher } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
@@ -50,7 +50,7 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
 
   return chats.reduce(
     (groups, chat) => {
-      const chatDate = new Date(chat.createdAt);
+      const chatDate = new Date(chat.created_at);
 
       if (isToday(chatDate)) {
         groups.today.push(chat);

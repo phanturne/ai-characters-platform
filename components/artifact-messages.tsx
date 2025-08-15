@@ -1,12 +1,12 @@
-import { PreviewMessage, ThinkingMessage } from './message';
-import type { Vote } from '@/lib/db/schema';
-import { memo } from 'react';
-import equal from 'fast-deep-equal';
-import type { UIArtifact } from './artifact';
-import type { UseChatHelpers } from '@ai-sdk/react';
-import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
+import type { Vote } from '@/lib/supabase/schema';
 import type { ChatMessage } from '@/lib/types';
+import type { UseChatHelpers } from '@ai-sdk/react';
+import equal from 'fast-deep-equal';
+import { motion } from 'framer-motion';
+import { memo } from 'react';
+import type { UIArtifact } from './artifact';
+import { PreviewMessage, ThinkingMessage } from './message';
 
 interface ArtifactMessagesProps {
   chatId: string;
@@ -52,7 +52,7 @@ function PureArtifactMessages({
           isLoading={status === 'streaming' && index === messages.length - 1}
           vote={
             votes
-              ? votes.find((vote) => vote.messageId === message.id)
+              ? votes.find((vote) => vote.message_id === message.id)
               : undefined
           }
           setMessages={setMessages}

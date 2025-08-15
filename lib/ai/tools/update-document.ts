@@ -1,5 +1,6 @@
 import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
-import { getDocumentById } from '@/lib/db/queries';
+import type { Database, SupabaseClient } from '@/lib/supabase/schema';
+import { getDocumentById } from '@/lib/supabase/services';
 import type { ChatMessage } from '@/lib/types';
 import type { Session } from '@supabase/supabase-js';
 import { tool, type UIMessageStreamWriter } from 'ai';
@@ -8,9 +9,14 @@ import { z } from 'zod';
 interface UpdateDocumentProps {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  supabase: SupabaseClient<Database>;
 }
 
-export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
+export const updateDocument = ({
+  session,
+  dataStream,
+  supabase,
+}: UpdateDocumentProps) =>
   tool({
     description: 'Update a document with the given description.',
     inputSchema: z.object({
@@ -20,7 +26,7 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      const document = await getDocumentById(supabase, { id });
 
       if (!document) {
         return {
@@ -48,6 +54,7 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
         description,
         dataStream,
         session,
+        supabase,
       });
 
       dataStream.write({ type: 'data-finish', data: null, transient: true });

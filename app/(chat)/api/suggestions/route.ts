@@ -1,6 +1,6 @@
-import { getSuggestionsByDocumentId } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { createClient } from '@/lib/supabase/server';
+import { getSuggestionsByDocumentId } from '@/lib/supabase/services';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('unauthorized:suggestions').toResponse();
   }
 
-  const suggestions = await getSuggestionsByDocumentId({
+  const suggestions = await getSuggestionsByDocumentId(supabase, {
     documentId,
   });
 
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return Response.json([], { status: 200 });
   }
 
-  if (suggestion.userId !== session.user.id) {
+  if (suggestion.user_id !== session.user.id) {
     return new ChatSDKError('forbidden:api').toResponse();
   }
 

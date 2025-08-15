@@ -1,13 +1,13 @@
-import { PreviewMessage, ThinkingMessage } from './message';
-import { Greeting } from './greeting';
-import { memo } from 'react';
-import type { Vote } from '@/lib/db/schema';
-import equal from 'fast-deep-equal';
-import type { UseChatHelpers } from '@ai-sdk/react';
-import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
+import type { Vote } from '@/lib/supabase/schema';
 import type { ChatMessage } from '@/lib/types';
+import type { UseChatHelpers } from '@ai-sdk/react';
+import equal from 'fast-deep-equal';
+import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { useDataStream } from './data-stream-provider';
+import { Greeting } from './greeting';
+import { PreviewMessage, ThinkingMessage } from './message';
 
 interface MessagesProps {
   chatId: string;
@@ -57,7 +57,7 @@ function PureMessages({
           isLoading={status === 'streaming' && messages.length - 1 === index}
           vote={
             votes
-              ? votes.find((vote) => vote.messageId === message.id)
+              ? votes.find((vote) => vote.message_id === message.id)
               : undefined
           }
           setMessages={setMessages}

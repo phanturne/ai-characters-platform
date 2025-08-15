@@ -1,7 +1,7 @@
 'use client';
 
 import { useArtifact } from '@/hooks/use-artifact';
-import type { Document } from '@/lib/db/schema';
+import type { Document } from '@/lib/supabase/schema';
 import { cn, fetcher } from '@/lib/utils';
 import equal from 'fast-deep-equal';
 import {
@@ -92,8 +92,9 @@ export function DocumentPreview({
           kind: artifact.kind,
           content: artifact.content,
           id: artifact.documentId,
-          createdAt: new Date(),
-          userId: 'noop',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_id: 'noop',
         }
       : null;
 
@@ -108,7 +109,7 @@ export function DocumentPreview({
       />
       <DocumentHeader
         title={document.title}
-        kind={document.kind}
+        kind={document.kind as 'code' | 'text' | 'image' | 'sheet'}
         isStreaming={artifact.status === 'streaming'}
       />
       <DocumentContent document={document} />
@@ -175,7 +176,7 @@ const PureHitboxLayer = ({
             },
       );
     },
-    [setArtifact, result],
+    [setArtifact, result, hitboxRef],
   );
 
   return (

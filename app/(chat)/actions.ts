@@ -1,14 +1,15 @@
 'use server';
 
-import { generateText, type UIMessage } from 'ai';
-import { cookies } from 'next/headers';
+import type { VisibilityType } from '@/components/visibility-selector';
+import { myProvider } from '@/lib/ai/providers';
+import { createClient } from '@/lib/supabase/server';
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
-} from '@/lib/db/queries';
-import type { VisibilityType } from '@/components/visibility-selector';
-import { myProvider } from '@/lib/ai/providers';
+} from '@/lib/supabase/services';
+import { generateText, type UIMessage } from 'ai';
+import { cookies } from 'next/headers';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -34,11 +35,12 @@ export async function generateTitleFromUserMessage({
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
-  const [message] = await getMessageById({ id });
+  const supabase = await createClient();
+  const [message] = await getMessageById(supabase, { id });
 
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
+  await deleteMessagesByChatIdAfterTimestamp(supabase, {
+    chatId: message.chat_id,
+    timestamp: new Date(message.created_at),
   });
 }
 
@@ -49,5 +51,6 @@ export async function updateChatVisibility({
   chatId: string;
   visibility: VisibilityType;
 }) {
-  await updateChatVisiblityById({ chatId, visibility });
+  const supabase = await createClient();
+  await updateChatVisiblityById(supabase, { chatId, visibility });
 }

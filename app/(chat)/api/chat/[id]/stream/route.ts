@@ -1,11 +1,11 @@
+import { ChatSDKError } from '@/lib/errors';
+import type { Chat } from '@/lib/supabase/schema';
+import { createClient } from '@/lib/supabase/server';
 import {
   getChatById,
   getMessagesByChatId,
   getStreamIdsByChatId,
-} from '@/lib/db/queries';
-import type { Chat } from '@/lib/db/schema';
-import { ChatSDKError } from '@/lib/errors';
-import { createClient } from '@/lib/supabase/server';
+} from '@/lib/supabase/services';
 import type { ChatMessage } from '@/lib/types';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
 import { differenceInSeconds } from 'date-fns';
@@ -40,7 +40,7 @@ export async function GET(
   let chat: Chat;
 
   try {
-    chat = await getChatById({ id: chatId });
+    chat = await getChatById(supabase, { id: chatId });
   } catch {
     return new ChatSDKError('not_found:chat').toResponse();
   }
@@ -49,11 +49,11 @@ export async function GET(
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+  if (chat.visibility === 'private' && chat.user_id !== session.user.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 
-  const streamIds = await getStreamIdsByChatId({ chatId });
+  const streamIds = await getStreamIdsByChatId(supabase, { chatId });
 
   if (!streamIds.length) {
     return new ChatSDKError('not_found:stream').toResponse();
@@ -78,7 +78,7 @@ export async function GET(
    * but the resumable stream has concluded at this point.
    */
   if (!stream) {
-    const messages = await getMessagesByChatId({ id: chatId });
+    const messages = await getMessagesByChatId(supabase, { id: chatId });
     const mostRecentMessage = messages.at(-1);
 
     if (!mostRecentMessage) {
@@ -89,7 +89,7 @@ export async function GET(
       return new Response(emptyDataStream, { status: 200 });
     }
 
-    const messageCreatedAt = new Date(mostRecentMessage.createdAt);
+    const messageCreatedAt = new Date(mostRecentMessage.created_at);
 
     if (differenceInSeconds(resumeRequestedAt, messageCreatedAt) > 15) {
       return new Response(emptyDataStream, { status: 200 });

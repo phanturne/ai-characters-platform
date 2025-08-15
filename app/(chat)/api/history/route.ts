@@ -1,6 +1,6 @@
-import { getChatsByUserId } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { createClient } from '@/lib/supabase/server';
+import { getChatsByUserId } from '@/lib/supabase/services';
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
-  const chats = await getChatsByUserId({
+  const chats = await getChatsByUserId(supabase, {
     id: session.user.id,
     limit,
     startingAfter,

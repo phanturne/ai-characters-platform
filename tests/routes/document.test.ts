@@ -1,7 +1,7 @@
-import type { Document } from '@/lib/db/schema';
+import { getMessageByErrorCode } from '@/lib/errors';
+import type { Document } from '@/lib/supabase/schema';
 import { generateUUID } from '@/lib/utils';
 import { expect, test } from '../fixtures';
-import { getMessageByErrorCode } from '@/lib/errors';
 
 const documentsCreatedByAda: Array<Document> = [];
 
@@ -147,7 +147,7 @@ test.describe
       const [firstDocument, secondDocument] = documentsCreatedByAda;
 
       const response = await adaContext.request.delete(
-        `/api/document?id=${firstDocument.id}&timestamp=${firstDocument.createdAt}`,
+        `/api/document?id=${firstDocument.id}&timestamp=${firstDocument.created_at}`,
       );
       expect(response.status()).toBe(200);
 

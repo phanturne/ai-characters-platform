@@ -3,10 +3,10 @@ import { imageDocumentHandler } from '@/artifacts/image/server';
 import { sheetDocumentHandler } from '@/artifacts/sheet/server';
 import { textDocumentHandler } from '@/artifacts/text/server';
 import type { ArtifactKind } from '@/components/artifact';
-import { saveDocument } from '@/lib/db/queries';
+import type { Database, Document, SupabaseClient } from '@/lib/supabase/schema';
+import { saveDocument } from '@/lib/supabase/services';
 import type { Session } from '@supabase/supabase-js';
 import type { UIMessageStreamWriter } from 'ai';
-import type { Document } from '../db/schema';
 import type { ChatMessage } from '../types';
 
 export interface SaveDocumentProps {
@@ -22,6 +22,7 @@ export interface CreateDocumentCallbackProps {
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  supabase: SupabaseClient<Database>;
 }
 
 export interface UpdateDocumentCallbackProps {
@@ -29,6 +30,7 @@ export interface UpdateDocumentCallbackProps {
   description: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  supabase: SupabaseClient<Database>;
 }
 
 export interface DocumentHandler<T = ArtifactKind> {
@@ -50,10 +52,11 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         title: args.title,
         dataStream: args.dataStream,
         session: args.session,
+        supabase: args.supabase,
       });
 
       if (args.session?.user?.id) {
-        await saveDocument({
+        await saveDocument(args.supabase, {
           id: args.id,
           title: args.title,
           content: draftContent,
@@ -70,10 +73,11 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         description: args.description,
         dataStream: args.dataStream,
         session: args.session,
+        supabase: args.supabase,
       });
 
       if (args.session?.user?.id) {
-        await saveDocument({
+        await saveDocument(args.supabase, {
           id: args.document.id,
           title: args.document.title,
           content: draftContent,

@@ -1,4 +1,4 @@
-import type { DBMessage, Document } from '@/lib/db/schema';
+import type { Document, Message } from '@/lib/supabase/schema';
 import type { User } from '@supabase/supabase-js';
 import type {
   CoreAssistantMessage,
@@ -79,7 +79,7 @@ export function getDocumentTimestampByIndex(
   if (!documents) return new Date();
   if (index > documents.length) return new Date();
 
-  return documents[index].createdAt;
+  return documents[index].created_at;
 }
 
 export function getTrailingMessageId({
@@ -98,13 +98,13 @@ export function sanitizeText(text: string) {
   return text.replace('<has_function_call>', '');
 }
 
-export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
+export function convertToUIMessages(messages: Message[]): ChatMessage[] {
   return messages.map((message) => ({
     id: message.id,
     role: message.role as 'user' | 'assistant' | 'system',
     parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
     metadata: {
-      createdAt: formatISO(message.createdAt),
+      createdAt: formatISO(new Date(message.created_at)),
     },
   }));
 }

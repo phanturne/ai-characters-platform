@@ -1,8 +1,12 @@
 'use server';
 
-import { getSuggestionsByDocumentId } from '@/lib/db/queries';
+import { createClient } from '@/lib/supabase/server';
+import { getSuggestionsByDocumentId } from '@/lib/supabase/services';
 
 export async function getSuggestions({ documentId }: { documentId: string }) {
-  const suggestions = await getSuggestionsByDocumentId({ documentId });
+  const supabase = await createClient();
+  const suggestions = await getSuggestionsByDocumentId(supabase, {
+    documentId,
+  });
   return suggestions ?? [];
 }
