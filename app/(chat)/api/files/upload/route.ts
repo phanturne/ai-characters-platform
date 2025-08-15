@@ -1,8 +1,8 @@
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
+import { FileService } from '@/lib/supabase/services/file-service';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as Blob;
+    const filename = formData.get('filename') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -49,20 +50,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Get filename from formData since Blob doesn't have name property
-    const filename = (formData.get('file') as File).name;
-    const fileBuffer = await file.arrayBuffer();
+    // Use provided filename or generate one if not provided
+    const originalFilename =
+      filename || `upload-${Date.now()}.${file.type.split('/')[1]}`;
 
     try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: 'public',
-      });
+      const fileService = new FileService();
+      const uploadedFile = await fileService.uploadFile(
+        file,
+        originalFilename,
+        session.user.id,
+      );
 
-      return NextResponse.json(data);
+      return NextResponse.json(uploadedFile);
     } catch (error) {
+      console.error('Upload error:', error);
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
     }
   } catch (error) {
+    console.error('Request processing error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 },

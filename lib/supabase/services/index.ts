@@ -41,3 +41,7 @@ export {
   createStreamId,
   getStreamIdsByChatId,
 } from './queries';
+
+// File services
+export { FileService } from './file-service';
+export type { UploadedFile } from './file-service';

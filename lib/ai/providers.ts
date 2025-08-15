@@ -29,14 +29,14 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
+        'chat-model': openrouter.chat('mistralai/mistral-small-3.2-24b-instruct:free'),
         'chat-model-reasoning': wrapLanguageModel({
-          model: openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
+          model: openrouter.chat('mistralai/mistral-small-3.2-24b-instruct:free'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
+        'title-model': openrouter.chat('mistralai/mistral-small-3.2-24b-instruct:free'),
         'artifact-model': openrouter.chat(
-          'deepseek/deepseek-chat-v3-0324:free',
+          'mistralai/mistral-small-3.2-24b-instruct:free',
         ),
       },
       imageModels: {
