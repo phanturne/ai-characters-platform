@@ -32,6 +32,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.35.3
         version: 6.36.4
+      '@openrouter/ai-sdk-provider':
+        specifier: 1.0.0-beta.7
+        version: 1.0.0-beta.7(ai@5.0.0-beta.6(zod@3.25.68))(zod@3.25.68)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -1108,6 +1111,13 @@ packages:
   '@nolyfill/is-core-module@1.0.39':
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
+
+  '@openrouter/ai-sdk-provider@1.0.0-beta.7':
+    resolution: {integrity: sha512-DDCaOBLHX52lxa0FhLT/CpREAt6sbq21n9HZHFRRs8r4G2/tH3bgfcUfy5Dq6IN3xsGtCJuA50i2hL25ffzsow==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      ai: ^5.0.0-beta.12
+      zod: ^3.24.1 || ^v4
 
   '@opentelemetry/api-logs@0.200.0':
     resolution: {integrity: sha512-IKJBQxh91qJ+3ssRly5hYEJ8NDHu9oY/B1PXVSCWf7zytmYO9RNLB0Ox9XQ/fJ8m6gY6Q6NtBWlmXfaXt5Uc4Q==}
@@ -4562,6 +4572,11 @@ snapshots:
       fastq: 1.19.1
 
   '@nolyfill/is-core-module@1.0.39': {}
+
+  '@openrouter/ai-sdk-provider@1.0.0-beta.7(ai@5.0.0-beta.6(zod@3.25.68))(zod@3.25.68)':
+    dependencies:
+      ai: 5.0.0-beta.6(zod@3.25.68)
+      zod: 3.25.68
 
   '@opentelemetry/api-logs@0.200.0':
     dependencies:

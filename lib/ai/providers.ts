@@ -1,16 +1,22 @@
+import { xai } from '@ai-sdk/xai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from 'ai';
-import { xai } from '@ai-sdk/xai';
+import { isTestEnvironment } from '../constants';
 import {
   artifactModel,
   chatModel,
   reasoningModel,
   titleModel,
 } from './models.test';
-import { isTestEnvironment } from '../constants';
+
+// Create OpenRouter provider instance
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY || '',
+});
 
 export const myProvider = isTestEnvironment
   ? customProvider({
@@ -23,13 +29,15 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': xai('grok-2-vision-1212'),
+        'chat-model': openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
         'chat-model-reasoning': wrapLanguageModel({
-          model: xai('grok-3-mini-beta'),
+          model: openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': xai('grok-2-1212'),
-        'artifact-model': xai('grok-2-1212'),
+        'title-model': openrouter.chat('deepseek/deepseek-chat-v3-0324:free'),
+        'artifact-model': openrouter.chat(
+          'deepseek/deepseek-chat-v3-0324:free',
+        ),
       },
       imageModels: {
         'small-model': xai.imageModel('grok-2-image'),
