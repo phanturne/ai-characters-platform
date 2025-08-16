@@ -5,6 +5,7 @@ import { Chat } from '@/components/chat';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
+import type { Chat as ChatType } from '@/lib/supabase/schema';
 import { createClient } from '@/lib/supabase/server';
 import { getChatById, getMessagesByChatId } from '@/lib/supabase/services';
 import { convertToUIMessages } from '@/lib/utils';
@@ -21,7 +22,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     redirect('/login');
   }
 
-  const chat = await getChatById(supabase, { id });
+  const chat: ChatType = await getChatById(supabase, { id });
 
   if (!chat) {
     notFound();
@@ -56,6 +57,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           initialVisibilityType={chat.visibility as VisibilityType}
           isReadonly={session?.user?.id !== chat.user_id}
           autoResume={true}
+          characterId={chat.character_id || undefined}
         />
         <DataStreamHandler />
       </>
@@ -71,6 +73,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         initialVisibilityType={chat.visibility as VisibilityType}
         isReadonly={session?.user?.id !== chat.user_id}
         autoResume={true}
+        characterId={chat.character_id || undefined}
       />
       <DataStreamHandler />
     </>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,8 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { cn } from '@/lib/utils';
+import { Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -61,6 +63,34 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarHistory user={user || undefined} />
+        {/* Add Characters section */}
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+            Characters
+          </h2>
+          <div className="space-y-1">
+            <Link
+              href="/characters"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'w-full justify-start',
+              )}
+            >
+              <Users className="size-4 mr-2" />
+              Browse Characters
+            </Link>
+            <Link
+              href="/characters/my"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'w-full justify-start',
+              )}
+            >
+              <Settings className="size-4 mr-2" />
+              My Characters
+            </Link>
+          </div>
+        </div>
       </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav />}</SidebarFooter>
     </Sidebar>

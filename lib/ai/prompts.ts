@@ -42,6 +42,14 @@ export interface RequestHints {
   country: Geo['country'];
 }
 
+export interface CharacterInfo {
+  name: string;
+  personality: string;
+  scenario: string;
+  systemPrompt: string;
+  postHistoryInstructions?: string;
+}
+
 export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
 About the origin of user's request:
 - lat: ${requestHints.latitude}
@@ -50,19 +58,34 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const getCharacterPrompt = (character: CharacterInfo) => `\
+You are roleplaying as ${character.name}.
+
+${character.personality ? `Personality: ${character.personality}` : ''}
+${character.scenario ? `Scenario/Setting: ${character.scenario}` : ''}
+
+${character.systemPrompt}
+
+${character.postHistoryInstructions ? `After reading chat history: ${character.postHistoryInstructions}` : ''}
+
+Stay in character at all times. Respond as ${character.name} would, maintaining their personality, speech patterns, and knowledge of the scenario.`;
+
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  character,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  character?: CharacterInfo;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const characterPrompt = character ? getCharacterPrompt(character) : '';
 
   if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${characterPrompt}\n\n${requestPrompt}`;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${characterPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
   }
 };
 

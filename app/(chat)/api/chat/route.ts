@@ -1,7 +1,11 @@
 import type { VisibilityType } from '@/components/visibility-selector';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import type { ChatModel } from '@/lib/ai/models';
-import { systemPrompt, type RequestHints } from '@/lib/ai/prompts';
+import {
+  systemPrompt,
+  type CharacterInfo,
+  type RequestHints,
+} from '@/lib/ai/prompts';
 import { myProvider } from '@/lib/ai/providers';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { getWeather } from '@/lib/ai/tools/get-weather';
@@ -21,6 +25,7 @@ import {
   saveChat,
   saveMessages,
 } from '@/lib/supabase/services';
+import { getCharacterById } from '@/lib/supabase/services/queries';
 import type { UserType } from '@/lib/supabase/types';
 import type { ChatMessage } from '@/lib/types';
 import { convertToUIMessages, generateUUID, getUserType } from '@/lib/utils';
@@ -82,11 +87,13 @@ export async function POST(request: Request) {
       message,
       selectedChatModel,
       selectedVisibilityType,
+      characterId,
     }: {
       id: string;
       message: ChatMessage;
       selectedChatModel: ChatModel['id'];
       selectedVisibilityType: VisibilityType;
+      characterId?: string;
     } = requestBody;
 
     const supabase = await createClient();
@@ -128,6 +135,7 @@ export async function POST(request: Request) {
           userId: session.user.id,
           title,
           visibility: selectedVisibilityType,
+          characterId: characterId || null,
         });
       } catch (error) {
         console.error('Failed to save chat:', error);
@@ -170,11 +178,36 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId(supabase, { streamId, chatId: id });
 
+    // Fetch character information if this is a character chat
+    let characterInfo: CharacterInfo | undefined;
+    if (characterId) {
+      try {
+        const character = await getCharacterById(supabase, { id: characterId });
+
+        if (character) {
+          characterInfo = {
+            name: character.name,
+            personality: character.personality || '',
+            scenario: character.scenario || '',
+            systemPrompt: character.system_prompt,
+            postHistoryInstructions:
+              character.post_history_instructions || undefined,
+          };
+        }
+      } catch (error) {
+        console.error('Failed to fetch character info:', error);
+      }
+    }
+
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({
+            selectedChatModel,
+            requestHints,
+            character: characterInfo,
+          }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:

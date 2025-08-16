@@ -29,6 +29,7 @@ export function Chat({
   initialVisibilityType,
   isReadonly,
   autoResume,
+  characterId,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -36,6 +37,7 @@ export function Chat({
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
+  characterId?: string;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -70,6 +72,7 @@ export function Chat({
             message: messages.at(-1),
             selectedChatModel: initialChatModel,
             selectedVisibilityType: visibilityType,
+            characterId,
             ...body,
           },
         };

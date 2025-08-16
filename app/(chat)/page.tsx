@@ -33,6 +33,7 @@ export default async function Page() {
           initialVisibilityType="private"
           isReadonly={false}
           autoResume={false}
+          characterId={undefined}
         />
         <DataStreamHandler />
       </>
@@ -49,6 +50,7 @@ export default async function Page() {
         initialVisibilityType="private"
         isReadonly={false}
         autoResume={false}
+        characterId={undefined}
       />
       <DataStreamHandler />
     </>
