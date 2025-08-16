@@ -65,7 +65,7 @@
     "prosemirror-schema-list": "^1.4.1",
     "prosemirror-state": "^1.4.3",
     "prosemirror-transform": "^1.10.3",
-    "prosemirror-view": "^1.34.3",
+    "prosemirror-view": "^1.40.1",
     "react": "19.0.0-rc-45804af1-20241021",
     "react-data-grid": "7.0.0-beta.47",
     "react-dom": "19.0.0-rc-45804af1-20241021",
