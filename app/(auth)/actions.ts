@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createProfileForUser } from '@/lib/supabase/services/profile-service';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
@@ -25,7 +26,7 @@ export const login = async (
 
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: validatedData.email,
       password: validatedData.password,
     });
@@ -33,6 +34,26 @@ export const login = async (
     if (error) {
       console.error('Login error:', error);
       return { status: 'failed' };
+    }
+
+    // Ensure profile exists for password-based logins
+    try {
+      if (data.user) {
+        const { error: selectError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+
+        const notFound = selectError && selectError.code === 'PGRST116';
+
+        if (notFound) {
+          await createProfileForUser(data.user.id, data.user.email ?? '');
+        }
+      }
+    } catch (profileError) {
+      // Non-fatal; continue login flow
+      console.error('Profile ensure on login failed:', profileError);
     }
 
     return { status: 'success' };

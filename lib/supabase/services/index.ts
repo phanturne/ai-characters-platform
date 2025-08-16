@@ -45,3 +45,10 @@ export {
 // File services
 export { FileService } from './file-service';
 export type { UploadedFile } from './file-service';
+
+// Profile services
+export {
+  createProfileForUser,
+  generateUniqueUsername,
+  isUsernameAvailable,
+} from './profile-service';
