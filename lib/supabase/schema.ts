@@ -32,6 +32,26 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
+// Character types
+export type Character = Database['public']['Tables']['characters']['Row'];
+export type CharacterInsert =
+  Database['public']['Tables']['characters']['Insert'];
+export type CharacterUpdate =
+  Database['public']['Tables']['characters']['Update'];
+
+// Tag types
+export type Tag = Database['public']['Tables']['tags']['Row'];
+export type TagInsert = Database['public']['Tables']['tags']['Insert'];
+export type TagUpdate = Database['public']['Tables']['tags']['Update'];
+
+// Character tag junction types
+export type CharacterTag =
+  Database['public']['Tables']['character_tags']['Row'];
+export type CharacterTagInsert =
+  Database['public']['Tables']['character_tags']['Insert'];
+export type CharacterTagUpdate =
+  Database['public']['Tables']['character_tags']['Update'];
+
 // Legacy type aliases for backward compatibility
 export type DBMessage = Message;
 export type User = Profile;

@@ -11,11 +11,13 @@ export async function saveChat(
     userId,
     title,
     visibility,
+    characterId,
   }: {
     id: string;
     userId: string;
     title: string;
     visibility: VisibilityType;
+    characterId?: string | null;
   },
 ) {
   try {
@@ -26,6 +28,7 @@ export async function saveChat(
         user_id: userId,
         title,
         visibility,
+        character_id: characterId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -611,6 +614,708 @@ export async function getStreamIdsByChatId(
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get stream ids by chat id',
+    );
+  }
+}
+
+// Character services
+
+// Helper function to validate that all provided tag IDs exist
+async function validateTagIds(
+  supabase: SupabaseInstance,
+  tagIds: string[],
+): Promise<void> {
+  if (tagIds.length === 0) return;
+
+  // Validate input array
+  if (!Array.isArray(tagIds)) {
+    throw new ChatSDKError('bad_request:database', 'Tag IDs must be an array');
+  }
+
+  // Filter out invalid tag IDs
+  const validTagIds = tagIds.filter(
+    (id) => id && typeof id === 'string' && id.trim().length > 0,
+  );
+
+  if (validTagIds.length !== tagIds.length) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Invalid tag ID format detected',
+    );
+  }
+
+  const { data: existingTags, error: tagsError } = await supabase
+    .from('tags')
+    .select('id')
+    .in('id', validTagIds);
+
+  if (tagsError) throw tagsError;
+
+  if (existingTags.length !== validTagIds.length) {
+    const foundTagIds = existingTags.map((tag) => tag.id);
+    const missingTagIds = validTagIds.filter((id) => !foundTagIds.includes(id));
+    throw new ChatSDKError(
+      'bad_request:database',
+      `Tags not found: ${missingTagIds.join(', ')}`,
+    );
+  }
+}
+
+// Helper function to insert character tags
+async function insertCharacterTags(
+  supabase: SupabaseInstance,
+  characterId: string,
+  tagIds: string[],
+): Promise<void> {
+  if (tagIds.length === 0) return;
+
+  // Validate inputs
+  if (!characterId || typeof characterId !== 'string') {
+    throw new ChatSDKError('bad_request:database', 'Invalid character ID');
+  }
+
+  const characterTags = tagIds.map((tagId) => ({
+    character_id: characterId,
+    tag_id: tagId,
+    created_at: new Date().toISOString(),
+  }));
+
+  const { error: insertError } = await supabase
+    .from('character_tags')
+    .insert(characterTags);
+
+  if (insertError) throw insertError;
+}
+
+// Helper function to efficiently sync tags to desired state
+async function syncCharacterTags(
+  supabase: SupabaseInstance,
+  characterId: string,
+  desiredTagIds: string[],
+) {
+  try {
+    // Validate that all desired tags exist
+    await validateTagIds(supabase, desiredTagIds);
+
+    // Get current tags
+    const { data: currentTags, error: currentTagsError } = await supabase
+      .from('character_tags')
+      .select('tag_id')
+      .eq('character_id', characterId);
+
+    if (currentTagsError) throw currentTagsError;
+
+    const currentTagIds = currentTags?.map((ct) => ct.tag_id) || [];
+
+    // Calculate what needs to be added/removed
+    const tagsToAdd = desiredTagIds.filter((id) => !currentTagIds.includes(id));
+    const tagsToRemove = currentTagIds.filter(
+      (id) => !desiredTagIds.includes(id),
+    );
+
+    // Remove tags that are no longer wanted
+    if (tagsToRemove.length > 0) {
+      const { error: removeError } = await supabase
+        .from('character_tags')
+        .delete()
+        .eq('character_id', characterId)
+        .in('tag_id', tagsToRemove);
+
+      if (removeError) throw removeError;
+    }
+
+    // Add new tags
+    await insertCharacterTags(supabase, characterId, tagsToAdd);
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to sync character tags',
+    );
+  }
+}
+
+export async function getCharacterById(
+  supabase: SupabaseInstance,
+  { id }: { id: string },
+) {
+  try {
+    const { data, error } = await supabase
+      .from('characters')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get character by id',
+    );
+  }
+}
+
+export async function getCharactersByUserId(
+  supabase: SupabaseInstance,
+  {
+    userId,
+    limit,
+    startingAfter,
+    endingBefore,
+  }: {
+    userId: string;
+    limit: number;
+    startingAfter: string | null;
+    endingBefore: string | null;
+  },
+) {
+  try {
+    const extendedLimit = limit + 1;
+
+    let query = supabase
+      .from('characters')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(extendedLimit);
+
+    if (startingAfter) {
+      const { data: selectedCharacter } = await supabase
+        .from('characters')
+        .select('created_at')
+        .eq('id', startingAfter)
+        .single();
+
+      if (!selectedCharacter) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Character with id ${startingAfter} not found`,
+        );
+      }
+
+      query = query.gt('created_at', selectedCharacter.created_at);
+    } else if (endingBefore) {
+      const { data: selectedCharacter } = await supabase
+        .from('characters')
+        .select('created_at')
+        .eq('id', endingBefore)
+        .single();
+
+      if (!selectedCharacter) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Character with id ${endingBefore} not found`,
+        );
+      }
+
+      query = query.lt('created_at', selectedCharacter.created_at);
+    }
+
+    const { data: filteredCharacters, error } = await query;
+
+    if (error) throw error;
+
+    const hasMore = (filteredCharacters || []).length > limit;
+
+    return {
+      characters: hasMore
+        ? filteredCharacters?.slice(0, limit)
+        : filteredCharacters || [],
+      hasMore,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get characters by user id',
+    );
+  }
+}
+
+export async function getPublicCharacters(
+  supabase: SupabaseInstance,
+  {
+    limit,
+    startingAfter,
+    endingBefore,
+  }: {
+    limit: number;
+    startingAfter: string | null;
+    endingBefore: string | null;
+  },
+) {
+  try {
+    const extendedLimit = limit + 1;
+
+    let query = supabase
+      .from('characters')
+      .select('*')
+      .eq('visibility', 'public')
+      .order('created_at', { ascending: false })
+      .limit(extendedLimit);
+
+    if (startingAfter) {
+      const { data: selectedCharacter } = await supabase
+        .from('characters')
+        .select('created_at')
+        .eq('id', startingAfter)
+        .single();
+
+      if (!selectedCharacter) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Character with id ${startingAfter} not found`,
+        );
+      }
+
+      query = query.gt('created_at', selectedCharacter.created_at);
+    } else if (endingBefore) {
+      const { data: selectedCharacter } = await supabase
+        .from('characters')
+        .select('created_at')
+        .eq('id', endingBefore)
+        .single();
+
+      if (!selectedCharacter) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Character with id ${endingBefore} not found`,
+        );
+      }
+
+      query = query.lt('created_at', selectedCharacter.created_at);
+    }
+
+    const { data: filteredCharacters, error } = await query;
+
+    if (error) throw error;
+
+    const hasMore = (filteredCharacters || []).length > limit;
+
+    return {
+      characters: hasMore
+        ? filteredCharacters?.slice(0, limit)
+        : filteredCharacters || [],
+      hasMore,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get public characters',
+    );
+  }
+}
+
+export async function updateCharacter(
+  supabase: SupabaseInstance,
+  {
+    id,
+    updates,
+    tagIds,
+    enhancedErrorHandling = false,
+  }: {
+    id: string;
+    updates: Partial<Database['public']['Tables']['characters']['Update']>;
+    tagIds?: string[];
+    enhancedErrorHandling?: boolean;
+  },
+) {
+  try {
+    // Update the character first
+    const { data: character, error: characterError } = await supabase
+      .from('characters')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (characterError) throw characterError;
+
+    // If tags are provided, sync to the desired state
+    if (tagIds !== undefined) {
+      await syncCharacterTags(supabase, id, tagIds);
+    }
+
+    return character;
+  } catch (error) {
+    if (enhancedErrorHandling && error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update character',
+    );
+  }
+}
+
+export async function deleteCharacterById(
+  supabase: SupabaseInstance,
+  { id }: { id: string },
+) {
+  try {
+    // Delete related character tags first
+    await supabase.from('character_tags').delete().eq('character_id', id);
+
+    // Delete the character
+    const { data, error } = await supabase
+      .from('characters')
+      .delete()
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete character by id',
+    );
+  }
+}
+
+// Tag services
+export async function getAllTags(supabase: SupabaseInstance) {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get all tags');
+  }
+}
+
+export async function getTagsByCharacterId(
+  supabase: SupabaseInstance,
+  { characterId }: { characterId: string },
+) {
+  try {
+    if (!characterId || typeof characterId !== 'string') {
+      throw new ChatSDKError('bad_request:database', 'Invalid character ID');
+    }
+
+    const { data, error } = await supabase
+      .from('character_tags')
+      .select(`
+        tag_id,
+        tags (
+          id,
+          name,
+          description,
+          is_system
+        )
+      `)
+      .eq('character_id', characterId);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get tags by character id',
+    );
+  }
+}
+
+// Character tag junction services
+export async function addTagsToCharacter(
+  supabase: SupabaseInstance,
+  {
+    characterId,
+    tagIds,
+  }: {
+    characterId: string;
+    tagIds: string[];
+  },
+) {
+  try {
+    // Validate that all tags exist
+    await validateTagIds(supabase, tagIds);
+
+    // Insert the tags
+    await insertCharacterTags(supabase, characterId, tagIds);
+
+    // Return the inserted data for backward compatibility
+    const { data, error } = await supabase
+      .from('character_tags')
+      .select('*')
+      .eq('character_id', characterId)
+      .in('tag_id', tagIds);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to add tags to character',
+    );
+  }
+}
+
+export async function removeTagsFromCharacter(
+  supabase: SupabaseInstance,
+  {
+    characterId,
+    tagIds,
+  }: {
+    characterId: string;
+    tagIds: string[];
+  },
+) {
+  try {
+    if (tagIds.length === 0) return { removedCount: 0 };
+
+    const { error } = await supabase
+      .from('character_tags')
+      .delete()
+      .eq('character_id', characterId)
+      .in('tag_id', tagIds);
+
+    if (error) throw error;
+
+    return { removedCount: tagIds.length };
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to remove tags from character',
+    );
+  }
+}
+
+export async function getChatsByCharacterId(
+  supabase: SupabaseInstance,
+  {
+    characterId,
+    limit,
+    startingAfter,
+    endingBefore,
+  }: {
+    characterId: string;
+    limit: number;
+    startingAfter: string | null;
+    endingBefore: string | null;
+  },
+) {
+  try {
+    const extendedLimit = limit + 1;
+
+    let query = supabase
+      .from('chat')
+      .select('*')
+      .eq('character_id', characterId)
+      .order('created_at', { ascending: false })
+      .limit(extendedLimit);
+
+    if (startingAfter) {
+      const { data: selectedChat } = await supabase
+        .from('chat')
+        .select('created_at')
+        .eq('id', startingAfter)
+        .single();
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${startingAfter} not found`,
+        );
+      }
+
+      query = query.gt('created_at', selectedChat.created_at);
+    } else if (endingBefore) {
+      const { data: selectedChat } = await supabase
+        .from('chat')
+        .select('created_at')
+        .eq('id', endingBefore)
+        .single();
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${endingBefore} not found`,
+        );
+      }
+
+      query = query.lt('created_at', selectedChat.created_at);
+    }
+
+    const { data: filteredChats, error } = await query;
+
+    if (error) throw error;
+
+    const hasMore = (filteredChats || []).length > limit;
+
+    return {
+      chats: hasMore ? filteredChats?.slice(0, limit) : filteredChats || [],
+      hasMore,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chats by character id',
+    );
+  }
+}
+
+export async function createCharacterWithTagValidation(
+  supabase: SupabaseInstance,
+  {
+    userId,
+    name,
+    description,
+    personality,
+    scenario,
+    firstMessage,
+    messageExample,
+    creatorNotes,
+    systemPrompt,
+    postHistoryInstructions,
+    alternateGreetings,
+    avatarUrl,
+    characterVersion,
+    isNsfw,
+    visibility,
+    tagIds,
+  }: {
+    userId: string;
+    name: string;
+    description?: string | null;
+    personality?: string | null;
+    scenario?: string | null;
+    firstMessage?: string | null;
+    messageExample?: string | null;
+    creatorNotes?: string | null;
+    systemPrompt: string;
+    postHistoryInstructions?: string | null;
+    alternateGreetings?: string[] | null;
+    avatarUrl?: string | null;
+    characterVersion?: number;
+    isNsfw?: boolean;
+    visibility?: string;
+    tagIds?: string[];
+  },
+) {
+  try {
+    // Validate that all provided tags exist
+    if (tagIds && tagIds.length > 0) {
+      await validateTagIds(supabase, tagIds);
+    }
+
+    // Create the character
+    const { data: character, error: characterError } = await supabase
+      .from('characters')
+      .insert({
+        user_id: userId,
+        name,
+        description,
+        personality,
+        scenario,
+        first_message: firstMessage,
+        message_example: messageExample,
+        creator_notes: creatorNotes,
+        system_prompt: systemPrompt,
+        post_history_instructions: postHistoryInstructions,
+        alternate_greetings: alternateGreetings,
+        avatar_url: avatarUrl,
+        character_version: characterVersion || 1,
+        is_nsfw: isNsfw || false,
+        visibility: visibility || 'private',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (characterError) throw characterError;
+
+    // Add the tags to the character
+    if (tagIds && tagIds.length > 0) {
+      await insertCharacterTags(supabase, character.id, tagIds);
+    }
+
+    return character;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create character with tags',
+    );
+  }
+}
+
+export async function modifyCharacterTags(
+  supabase: SupabaseInstance,
+  {
+    characterId,
+    addTagIds,
+    removeTagIds,
+  }: {
+    characterId: string;
+    addTagIds?: string[];
+    removeTagIds?: string[];
+  },
+) {
+  try {
+    // Validate that all tags to add exist
+    if (addTagIds && addTagIds.length > 0) {
+      await validateTagIds(supabase, addTagIds);
+    }
+
+    // Remove specified tags
+    if (removeTagIds && removeTagIds.length > 0) {
+      const { error: removeError } = await supabase
+        .from('character_tags')
+        .delete()
+        .eq('character_id', characterId)
+        .in('tag_id', removeTagIds);
+
+      if (removeError) throw removeError;
+    }
+
+    // Add new tags (only if they don't already exist)
+    if (addTagIds && addTagIds.length > 0) {
+      // Check which tags already exist for this character
+      const { data: existingCharacterTags } = await supabase
+        .from('character_tags')
+        .select('tag_id')
+        .eq('character_id', characterId)
+        .in('tag_id', addTagIds);
+
+      const existingTagIds =
+        existingCharacterTags?.map((ct) => ct.tag_id) || [];
+      const newTagIds = addTagIds.filter((id) => !existingTagIds.includes(id));
+
+      // Insert only the new tags
+      await insertCharacterTags(supabase, characterId, newTagIds);
+    }
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to modify character tags',
     );
   }
 }

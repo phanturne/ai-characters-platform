@@ -14,8 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      character_tags: {
+        Row: {
+          character_id: string
+          created_at: string
+          tag_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          tag_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_tags_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      characters: {
+        Row: {
+          alternate_greetings: string[] | null
+          avatar_url: string | null
+          character_version: number
+          created_at: string
+          creator_notes: string | null
+          description: string | null
+          first_message: string | null
+          id: string
+          is_nsfw: boolean
+          message_example: string | null
+          name: string
+          personality: string | null
+          post_history_instructions: string | null
+          scenario: string | null
+          system_prompt: string
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          alternate_greetings?: string[] | null
+          avatar_url?: string | null
+          character_version?: number
+          created_at?: string
+          creator_notes?: string | null
+          description?: string | null
+          first_message?: string | null
+          id?: string
+          is_nsfw?: boolean
+          message_example?: string | null
+          name: string
+          personality?: string | null
+          post_history_instructions?: string | null
+          scenario?: string | null
+          system_prompt: string
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          alternate_greetings?: string[] | null
+          avatar_url?: string | null
+          character_version?: number
+          created_at?: string
+          creator_notes?: string | null
+          description?: string | null
+          first_message?: string | null
+          id?: string
+          is_nsfw?: boolean
+          message_example?: string | null
+          name?: string
+          personality?: string | null
+          post_history_instructions?: string | null
+          scenario?: string | null
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       chat: {
         Row: {
+          character_id: string | null
           created_at: string
           id: string
           title: string
@@ -24,6 +121,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          character_id?: string | null
           created_at?: string
           id?: string
           title: string
@@ -32,6 +130,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          character_id?: string | null
           created_at?: string
           id?: string
           title?: string
@@ -39,7 +138,15 @@ export type Database = {
           user_id?: string
           visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document: {
         Row: {
@@ -218,6 +325,30 @@ export type Database = {
           },
         ]
       }
+      tags: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       vote: {
         Row: {
           chat_id: string
@@ -262,7 +393,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_array_element_length: {
+        Args: { arr: string[]; max_length: number }
+        Returns: boolean
+      }
     }
     Enums: {
       document_kind: "code" | "text" | "image" | "sheet"
